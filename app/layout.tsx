@@ -33,9 +33,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
                     strokeLinejoin="round"
                     className="group-hover:rotate-12 transition-transform duration-300"
                   >
-                    <path d="M21 15a4 4 0 0 1-4 4H9l-4 3v-3a4 4 0 0 1-2-3.5V7a4 4 0 0 1 4-4h10a4 4 0 0 1 4 4z" />
-                    <path d="M8.5 11.5l2 2 4-4" />
-                    <path d="M16.8 8.2h.01" />
+                    <path d="M8 9 4 12l4 3" />
+                    <path d="m16 9 4 3-4 3" />
+                    <path d="M14 7 10 17" />
                   </svg>
                 </div>
                 <span className="text-sm font-semibold tracking-tight text-slate-100 group-hover:text-white transition-colors">

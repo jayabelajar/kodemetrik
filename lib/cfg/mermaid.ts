@@ -14,6 +14,9 @@ export function toMermaidFlowchart(nodes: CfgNode[], edges: CfgEdge[]): string {
       lines.push(`  ${n.id}{"${label}"}`);
     } else if (n.kind === "start" || n.kind === "end") {
       lines.push(`  ${n.id}(["${label}"])`);
+    } else if (n.kind === "merge") {
+      // Connector/join node: use a small circle to reduce visual noise.
+      lines.push(`  ${n.id}(("•"))`);
     } else if (n.kind === "return" || n.kind === "throw") {
       lines.push(`  ${n.id}[/"${label}"/]`);
     } else {
@@ -32,4 +35,3 @@ export function toMermaidFlowchart(nodes: CfgNode[], edges: CfgEdge[]): string {
 export function makeGraph(nodes: CfgNode[], edges: CfgEdge[]): CfgGraph {
   return { nodes, edges, mermaid: toMermaidFlowchart(nodes, edges) };
 }
-
