@@ -64,7 +64,14 @@
 }
 
 /* Premium Print Media Formatting Stylesheet */
+.print-only {
+  display: none;
+}
+
 @media print {
+  .print-only {
+    display: block !important;
+  }
   body {
     background-color: #ffffff !important;
     color: #090d16 !important;
@@ -103,4 +110,3 @@
     background-color: #e2e8f0 !important;
   }
 }
-

@@ -2,10 +2,10 @@
 
 import { useMemo, useState, useEffect } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import CodeEditor from "@/components/CodeEditor";
 import FileUpload from "@/components/FileUpload";
 import FolderUpload from "@/components/FolderUpload";
-import ResultTabs from "@/components/ResultTabs";
 import type { AnalyzeInput, AnalysisReport, LanguageId } from "@/types/analysis";
 import { analyzeInputs } from "@/lib/analyzer/analyze";
 
@@ -13,11 +13,11 @@ const MAX_TOTAL_BYTES = 5 * 1024 * 1024;
 const MAX_FILES = 100;
 
 export default function AnalyzerPage() {
+  const router = useRouter();
   const [mode, setMode] = useState<"paste" | "file" | "folder">("paste");
   const [language, setLanguage] = useState<LanguageId>("javascript");
   const [code, setCode] = useState<string>("");
   const [inputs, setInputs] = useState<AnalyzeInput[]>([]);
-  const [report, setReport] = useState<AnalysisReport | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isRunning, setIsRunning] = useState(false);
   const [toast, setToast] = useState<{ message: string; type: "success" | "error" } | null>(null);
@@ -58,7 +58,6 @@ export default function AnalyzerPage() {
   }
 
   function resetResults() {
-    setReport(null);
     setError(null);
   }
 
@@ -91,8 +90,6 @@ export default function AnalyzerPage() {
       await new Promise((resolve) => setTimeout(resolve, 800));
 
       const result = await analyzeInputs(selectedInputs);
-      setReport(result);
-      showToast("Analysis complete! AST diagnostic report loaded successfully.", "success");
 
       // Save to local storage history
       try {
@@ -113,9 +110,16 @@ export default function AnalyzerPage() {
         };
         const updated = [newHistoryItem, ...historyList].slice(0, 10);
         localStorage.setItem("codemetrik_history", JSON.stringify(updated));
+        localStorage.setItem("codemetrik_latest_result_id", newHistoryItem.id);
         setHistory(updated);
+        showToast("Analysis complete! Opening results…", "success");
+        router.push(`/results?id=${newHistoryItem.id}`);
       } catch (historyErr) {
         console.error("Failed to save history:", historyErr);
+        // Fallback: still open results using in-memory report.
+        localStorage.setItem("codemetrik_latest_report", JSON.stringify(result));
+        showToast("Analysis complete! Opening results…", "success");
+        router.push("/results");
       }
 
     } catch (e) {
@@ -427,9 +431,10 @@ export default function AnalyzerPage() {
                 return (
                   <div
                     key={item.id}
-                    onClick={() => {
-                      setReport(item.report);
-                      showToast(`Loaded analysis: ${item.fileNameSummary}`, "success");
+                  onClick={() => {
+                      localStorage.setItem("codemetrik_latest_result_id", item.id);
+                      showToast(`Opening results: ${item.fileNameSummary}`, "success");
+                      router.push(`/results?id=${item.id}`);
                     }}
                     className="group border border-slate-900 bg-slate-900/10 hover:bg-slate-900/30 hover:border-slate-800 p-3 rounded-lg cursor-pointer transition-all space-y-1.5 animate-fade-in"
                   >
@@ -455,13 +460,6 @@ export default function AnalyzerPage() {
           )}
         </aside>
       </div>
-
-      {/* Reports output */}
-      {report && (
-        <div className="border-t border-slate-900 pt-8 animate-fade-in-up">
-          <ResultTabs report={report} />
-        </div>
-      )}
 
       {/* Premium Vercel-style Toast Notification Popup */}
       {toast && (
@@ -552,4 +550,3 @@ export default function AnalyzerPage() {
     </main>
   );
 }
-

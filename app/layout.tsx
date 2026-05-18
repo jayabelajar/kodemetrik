@@ -49,6 +49,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
                   <Link href="/analyzer" className="text-slate-400 hover:text-slate-200 transition-colors">
                     Analyzer Console
                   </Link>
+                  <Link href="/docs" className="text-slate-400 hover:text-slate-200 transition-colors">
+                    Docs
+                  </Link>
                 </nav>
                 <span className="hidden h-4 w-px bg-slate-800 md:inline-block" />
                 <Link
@@ -77,4 +80,3 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     </html>
   );
 }
-

@@ -21,7 +21,8 @@
     "next": "^16.2.6",
     "php-parser": "^3.6.0",
     "react": "^19.2.6",
-    "react-dom": "^19.2.6"
+    "react-dom": "^19.2.6",
+    "xlsx": "^0.18.5"
   },
   "devDependencies": {
     "@types/babel__traverse": "^7.28.0",
