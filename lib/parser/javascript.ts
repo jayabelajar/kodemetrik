@@ -6,9 +6,15 @@ import { baseComplexity, addDecision } from "@/lib/metrics/cyclomatic";
 import { halsteadFromCounts, type HalsteadCounts } from "@/lib/metrics/halstead";
 import { maintainabilityScore } from "@/lib/metrics/maintainability";
 import { complexityStatus, recommendForComplexity } from "@/lib/recommendation/perFunction";
+import { buildJavaScriptCfg } from "@/lib/cfg/javascript";
+
+type CyclomaticBreakdown = NonNullable<FunctionReport["cyclomaticBreakdown"]>;
 
 function getStartLine(node: any): number | undefined {
   return typeof node?.loc?.start?.line === "number" ? node.loc.start.line : undefined;
+}
+function getEndLine(node: any): number | undefined {
+  return typeof node?.loc?.end?.line === "number" ? node.loc.end.line : undefined;
 }
 
 function functionName(path: NodePath<t.Function | t.ArrowFunctionExpression>): string {
@@ -72,58 +78,107 @@ function collectHalsteadForFunction(path: NodePath<any>): HalsteadCounts {
   return { operators, operands };
 }
 
-function cyclomaticForFunction(path: NodePath<any>): number {
+function cyclomaticForFunction(path: NodePath<any>): { score: number; breakdown: CyclomaticBreakdown } {
   let complexity = baseComplexity();
+  const breakdown: CyclomaticBreakdown = {
+    if: 0,
+    elseIf: 0,
+    for: 0,
+    forIn: 0,
+    forOf: 0,
+    while: 0,
+    doWhile: 0,
+    switchCase: 0,
+    catch: 0,
+    ternary: 0,
+    and: 0,
+    or: 0,
+  };
 
   path.traverse({
-    IfStatement() {
+    IfStatement(p: NodePath<t.IfStatement>) {
       complexity = addDecision(complexity);
+      breakdown.if += 1;
+      if (p.node.alternate && p.node.alternate.type === "IfStatement") breakdown.elseIf += 1;
     },
     ForStatement() {
       complexity = addDecision(complexity);
+      breakdown.for += 1;
     },
     ForInStatement() {
       complexity = addDecision(complexity);
+      breakdown.forIn += 1;
     },
     ForOfStatement() {
       complexity = addDecision(complexity);
+      breakdown.forOf += 1;
     },
     WhileStatement() {
       complexity = addDecision(complexity);
+      breakdown.while += 1;
     },
     DoWhileStatement() {
       complexity = addDecision(complexity);
+      breakdown.doWhile += 1;
     },
     CatchClause() {
       complexity = addDecision(complexity);
+      breakdown.catch += 1;
     },
     ConditionalExpression() {
       complexity = addDecision(complexity);
+      breakdown.ternary += 1;
     },
     LogicalExpression(p) {
-      if (p.node.operator === "&&" || p.node.operator === "||") complexity = addDecision(complexity);
+      if (p.node.operator === "&&") {
+        complexity = addDecision(complexity);
+        breakdown.and += 1;
+      } else if (p.node.operator === "||") {
+        complexity = addDecision(complexity);
+        breakdown.or += 1;
+      }
     },
     SwitchCase(p) {
-      if (p.node.test) complexity = addDecision(complexity);
+      if (p.node.test) {
+        complexity = addDecision(complexity);
+        breakdown.switchCase += 1;
+      }
     },
   });
 
-  return complexity;
+  return { score: complexity, breakdown };
 }
 
 function toReport(filePath: string, path: NodePath<any>): FunctionReport {
-  const cyclomatic = cyclomaticForFunction(path);
+  const cyclo = cyclomaticForFunction(path);
+  const cyclomatic = cyclo.score;
   const halstead = halsteadFromCounts(collectHalsteadForFunction(path));
   const status = complexityStatus(cyclomatic);
   const mi = maintainabilityScore(cyclomatic, halstead);
+  const startLine = getStartLine(path.node);
+  const endLine = getEndLine(path.node);
+  const loc =
+    typeof startLine === "number" && typeof endLine === "number" && endLine >= startLine
+      ? endLine - startLine + 1
+      : undefined;
+  const riskScore = Math.min(
+    100,
+    Math.max(0, cyclomatic * 3 + Math.log10(1 + halstead.effort) * 10 + (loc ?? 0) * 0.2),
+  );
+  const cfg = buildJavaScriptCfg(path);
   return {
     filePath,
     functionName: functionName(path as any),
-    startLine: getStartLine(path.node),
+    startLine,
+    endLine,
+    loc,
     cyclomatic,
     complexityStatus: status,
+    cyclomaticBreakdown: cyclo.breakdown,
     halstead,
     maintainabilityScore: mi,
+    riskScore,
+    cfg,
     recommendations: recommendForComplexity(status),
   };
 }
@@ -170,4 +225,3 @@ export async function analyzeJavaScriptFile(filePath: string, code: string): Pro
 
   return results;
 }
-

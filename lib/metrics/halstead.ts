@@ -23,6 +23,7 @@ export function halsteadFromCounts(counts: HalsteadCounts): HalsteadReport {
     distinctOperands === 0 ? 0 : (distinctOperators / 2) * (totalOperands / Math.max(1, distinctOperands));
   const effort = difficulty * volume;
   const estimatedBugs = volume / 3000;
+  const timeToProgramSeconds = effort / 18;
 
   return {
     distinctOperators,
@@ -35,6 +36,6 @@ export function halsteadFromCounts(counts: HalsteadCounts): HalsteadReport {
     difficulty,
     effort,
     estimatedBugs,
+    timeToProgramSeconds,
   };
 }
-

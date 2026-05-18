@@ -5,8 +5,7 @@ import Link from "next/link";
 import CodeEditor from "@/components/CodeEditor";
 import FileUpload from "@/components/FileUpload";
 import FolderUpload from "@/components/FolderUpload";
-import MetricTable from "@/components/MetricTable";
-import ResultCard from "@/components/ResultCard";
+import ResultTabs from "@/components/ResultTabs";
 import type { AnalyzeInput, AnalysisReport, LanguageId } from "@/types/analysis";
 import { analyzeInputs } from "@/lib/analyzer/analyze";
 
@@ -174,41 +173,8 @@ export default function AnalyzerPage() {
       ) : null}
 
       {report ? (
-        <section className="space-y-4">
-          <div className="grid gap-3 md:grid-cols-4">
-            <ResultCard label="Total Files" value={String(report.summary.totalFiles)} />
-            <ResultCard label="Total Functions" value={String(report.summary.totalFunctions)} />
-            <ResultCard
-              label="Avg Complexity"
-              value={report.summary.averageComplexity.toFixed(2)}
-              hint="Cyclomatic"
-            />
-            <ResultCard
-              label="Avg Maintainability"
-              value={report.summary.averageMaintainability.toFixed(0)}
-            />
-          </div>
-
-          <MetricTable rows={report.functions} />
-
-          {report.recommendations.length > 0 ? (
-            <div className="space-y-2">
-              <div className="text-sm font-semibold">Recommendations</div>
-              <div className="grid gap-2 md:grid-cols-2">
-                {report.recommendations.map((r) => (
-                  <div
-                    key={r}
-                    className="rounded-xl border border-zinc-800 bg-zinc-900/30 p-4 text-sm text-zinc-200"
-                  >
-                    {r}
-                  </div>
-                ))}
-              </div>
-            </div>
-          ) : null}
-        </section>
+        <ResultTabs report={report} />
       ) : null}
     </main>
   );
 }
-

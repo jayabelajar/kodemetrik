@@ -4,11 +4,15 @@ import { baseComplexity, addDecision } from "@/lib/metrics/cyclomatic";
 import { halsteadFromCounts, type HalsteadCounts } from "@/lib/metrics/halstead";
 import { maintainabilityScore } from "@/lib/metrics/maintainability";
 import { complexityStatus, recommendForComplexity } from "@/lib/recommendation/perFunction";
+import { buildPhpCfg } from "@/lib/cfg/php";
 
 type PhpNode = any;
 
 function getStartLine(node: any): number | undefined {
   return typeof node?.loc?.start?.line === "number" ? node.loc.start.line : undefined;
+}
+function getEndLine(node: any): number | undefined {
+  return typeof node?.loc?.end?.line === "number" ? node.loc.end.line : undefined;
 }
 
 function walk(node: PhpNode, visit: (n: PhpNode) => void) {
@@ -43,6 +47,38 @@ function cyclomaticForFunction(body: PhpNode): number {
     if (kind === "bin" && (n.type === "&&" || n.type === "||")) complexity = addDecision(complexity);
   });
   return complexity;
+}
+
+function cyclomaticBreakdownForFunction(body: PhpNode): NonNullable<FunctionReport["cyclomaticBreakdown"]> {
+  const breakdown: NonNullable<FunctionReport["cyclomaticBreakdown"]> = {
+    if: 0,
+    elseIf: 0,
+    for: 0,
+    forIn: 0,
+    forOf: 0,
+    while: 0,
+    doWhile: 0,
+    switchCase: 0,
+    catch: 0,
+    ternary: 0,
+    and: 0,
+    or: 0,
+  };
+  walk(body, (n) => {
+    const kind = n?.kind;
+    if (!kind) return;
+    if (kind === "if") breakdown.if += 1;
+    if (kind === "for") breakdown.for += 1;
+    if (kind === "foreach") breakdown.forOf += 1; // closest bucket
+    if (kind === "while") breakdown.while += 1;
+    if (kind === "do") breakdown.doWhile += 1;
+    if (kind === "case") breakdown.switchCase += 1;
+    if (kind === "catch") breakdown.catch += 1;
+    if (kind === "ternary") breakdown.ternary += 1;
+    if (kind === "bin" && n.type === "&&") breakdown.and += 1;
+    if (kind === "bin" && n.type === "||") breakdown.or += 1;
+  });
+  return breakdown;
 }
 
 function halsteadForFunction(body: PhpNode): HalsteadCounts {
@@ -92,17 +128,34 @@ export async function analyzePhpFile(filePath: string, code: string): Promise<Fu
     if (!n || typeof n !== "object") return;
     if (n.kind === "function" || n.kind === "method") {
       const cyclomatic = cyclomaticForFunction(n.body);
+      const cyclomaticBreakdown = cyclomaticBreakdownForFunction(n.body);
       const halstead = halsteadFromCounts(halsteadForFunction(n.body));
       const status = complexityStatus(cyclomatic);
       const mi = maintainabilityScore(cyclomatic, halstead);
+      const startLine = getStartLine(n);
+      const endLine = getEndLine(n);
+      const loc =
+        typeof startLine === "number" && typeof endLine === "number" && endLine >= startLine
+          ? endLine - startLine + 1
+          : undefined;
+      const riskScore = Math.min(
+        100,
+        Math.max(0, cyclomatic * 3 + Math.log10(1 + halstead.effort) * 10 + (loc ?? 0) * 0.2),
+      );
+      const cfg = buildPhpCfg(n);
       results.push({
         filePath,
         functionName: nameFromNode(n),
-        startLine: getStartLine(n),
+        startLine,
+        endLine,
+        loc,
         cyclomatic,
         complexityStatus: status,
+        cyclomaticBreakdown,
         halstead,
         maintainabilityScore: mi,
+        riskScore,
+        cfg,
         recommendations: recommendForComplexity(status),
       });
     }
