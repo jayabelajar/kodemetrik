@@ -200,14 +200,6 @@ export default function ResultTabs({ report }: { report: AnalysisReport }) {
         </div>
 
         <div className="flex items-center gap-3">
-          <button
-            type="button"
-            onClick={() => window.print()}
-            className="inline-flex items-center gap-1.5 rounded-lg border border-slate-800 bg-slate-950 px-3 py-1.5 text-xs font-semibold text-slate-400 transition-colors hover:border-slate-700 hover:text-white"
-          >
-            <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><path d="M6 9V2h12v7"/><rect x="6" y="14" width="12" height="8" rx="1"/></svg>
-            Print PDF
-          </button>
           <span className="font-mono text-[10px] text-slate-500 uppercase hidden sm:inline-block">
             Client Static AST Pipeline Done
           </span>
@@ -465,4 +457,3 @@ export default function ResultTabs({ report }: { report: AnalysisReport }) {
     </section>
   );
 }
-

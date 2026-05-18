@@ -3,7 +3,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 
 export const metadata: Metadata = {
-  title: "CodeMetrik — Deep Source Code Complexity Analysis",
+  title: "KodeMetrik — Deep Source Code Complexity Analysis",
   description: "High-performance developer tool to measure Cyclomatic Complexity, Halstead Metrics, and render interactive Control Flow Graphs client-side.",
 };
 
@@ -33,11 +33,13 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
                     strokeLinejoin="round"
                     className="group-hover:rotate-12 transition-transform duration-300"
                   >
-                    <path d="m8 3 4 8 5-5 5 15H2L8 3z" />
+                    <path d="M21 15a4 4 0 0 1-4 4H9l-4 3v-3a4 4 0 0 1-2-3.5V7a4 4 0 0 1 4-4h10a4 4 0 0 1 4 4z" />
+                    <path d="M8.5 11.5l2 2 4-4" />
+                    <path d="M16.8 8.2h.01" />
                   </svg>
                 </div>
                 <span className="text-sm font-semibold tracking-tight text-slate-100 group-hover:text-white transition-colors">
-                  CodeMetrik
+                  KodeMetrik
                 </span>
               </Link>
 
@@ -72,7 +74,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           {/* Footer */}
           <footer className="w-full border-t border-slate-900 bg-slate-950/40 py-6 text-center text-xs text-slate-500 no-print">
             <div className="mx-auto max-w-6xl px-4 text-center">
-              © {new Date().getFullYear()} CodeMetrik. All rights reserved.
+              © {new Date().getFullYear()} KodeMetrik. All rights reserved.
             </div>
           </footer>
         </div>

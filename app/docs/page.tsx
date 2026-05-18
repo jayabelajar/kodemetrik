@@ -47,7 +47,7 @@ export default function DocsPage() {
           <div className="space-y-1">
             <h1 className="text-2xl font-extrabold tracking-tight text-slate-100">Docs</h1>
             <p className="text-sm text-slate-400">
-              Panduan pemakaian CodeMetrik + penjelasan rumus dan cara penentuan metrik.
+              Panduan pemakaian KodeMetrik + penjelasan rumus dan cara penentuan metrik.
             </p>
           </div>
           <div className="flex items-center gap-2">
@@ -240,4 +240,3 @@ export default function DocsPage() {
     </main>
   );
 }
-
