@@ -184,7 +184,7 @@ export default function LandingPage() {
 
       {/* Call to Action */}
       <section className="rounded-2xl border border-slate-800 bg-gradient-to-r from-slate-950 via-slate-900/50 to-slate-950 p-8 md:p-12 text-center relative overflow-hidden">
-        <div className="absolute inset-0 bg-[radial-gradient(ellipse_80%_80%_at_50%_-20%,rgba(59,130,246,0.08),rgba(255,255,255,0))]" />
+        <div className="pointer-events-none absolute inset-0 -z-10 bg-[radial-gradient(ellipse_80%_80%_at_50%_-20%,rgba(59,130,246,0.08),rgba(255,255,255,0))]" />
         <h2 className="text-xl font-semibold md:text-2xl text-slate-100">
           Ready to analyze your project code quality?
         </h2>
@@ -203,4 +203,3 @@ export default function LandingPage() {
     </main>
   );
 }
-

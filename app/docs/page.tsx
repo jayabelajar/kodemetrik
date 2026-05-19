@@ -1,4 +1,5 @@
 import Link from "next/link";
+import LatestResultsLink from "@/components/LatestResultsLink";
 
 function Section({
   id,
@@ -57,12 +58,11 @@ export default function DocsPage() {
             >
               Open Analyzer
             </Link>
-            <Link
-              href="/results"
+            <LatestResultsLink
               className="rounded-lg border border-slate-800 bg-slate-900/30 px-4 py-2 text-xs font-semibold text-slate-200 transition-colors hover:border-slate-700 hover:text-white"
             >
               Open Results
-            </Link>
+            </LatestResultsLink>
           </div>
         </div>
 
@@ -73,6 +73,8 @@ export default function DocsPage() {
               { href: "#interpretation", label: "Interpretasi" },
               { href: "#cyclomatic", label: "Cyclomatic (CC)" },
               { href: "#halstead", label: "Halstead" },
+              { href: "#mi", label: "Maintainability (MI)" },
+              { href: "#references", label: "Referensi" },
             ].map((x) => (
               <a
                 key={x.href}
@@ -97,7 +99,7 @@ export default function DocsPage() {
             <InlineCode>Paste</InlineCode>, <InlineCode>File</InlineCode>, atau <InlineCode>Folder</InlineCode>.
           </MiniCard>
           <MiniCard title="2) Run analysis">
-            Klik <InlineCode>Run Analysis</InlineCode>. Setelah selesai, kamu otomatis diarahkan ke halaman{" "}
+            Klik <InlineCode>Run Diagnosis</InlineCode>. Setelah selesai, kamu otomatis diarahkan ke halaman{" "}
             <InlineCode>/results</InlineCode>.
           </MiniCard>
           <MiniCard title="3) Export">
@@ -119,8 +121,9 @@ export default function DocsPage() {
             <InlineCode>CRITICAL</InlineCode>.
           </MiniCard>
           <MiniCard title="Maintainability Index (MI)">
-            MI adalah skor ringkas “kemudahan maintain”. Skor lebih tinggi biasanya lebih baik. MI di sini dihitung dari
-            kombinasi Volume Halstead, CC, dan LOC (penjelasan formula di bagian MI).
+            MI adalah skor ringkas “kemudahan maintain”. Skor lebih tinggi biasanya lebih baik. Di KodeMetrik, MI adalah
+            skor <em>heuristic</em> berbasis Cyclomatic Complexity dan Halstead Volume (bukan formula MI klasik yang umum
+            di beberapa tool lain).
           </MiniCard>
           <MiniCard title="Halstead (HV, Effort, Bugs)">
             Halstead dihitung dari token operator/operand. Umumnya: Volume (HV) naik saat vocabulary/length naik; Effort
@@ -138,6 +141,10 @@ export default function DocsPage() {
           <MiniCard title="Definisi">
             Cyclomatic Complexity (CC) secara klasik: <InlineCode>CC = E − N + 2P</InlineCode> (E = edges, N = nodes, P
             = jumlah komponen terhubung). Dalam static analysis praktis, CC biasanya dihitung dari “decision points”.
+            <div className="mt-2 text-xs text-slate-500">
+              KodeMetrik memakai pendekatan <InlineCode>CC = 1 + jumlah decision points</InlineCode>, dan nested
+              function/closure tidak dihitung ke parent function.
+            </div>
           </MiniCard>
 
           <div className="rounded-xl border border-slate-800 bg-slate-950/40 overflow-hidden shadow-xl">
@@ -161,9 +168,9 @@ export default function DocsPage() {
                 <tbody className="divide-y divide-slate-900">
                   {[
                     { k: "if", c: "+1", n: "Setiap kondisi if menambah 1" },
-                    { k: "else if", c: "+1", n: "Setiap else-if menambah 1" },
+                    { k: "else if", c: "+1", n: "Termasuk hitungan if; ditampilkan di breakdown untuk informasi" },
                     { k: "for / while / do-while", c: "+1", n: "Loop menambah 1" },
-                    { k: "switch: case", c: "+1 / case", n: "Setiap case biasanya dihitung sebagai jalur" },
+                    { k: "switch: case", c: "+1 / case", n: "Setiap case yang memiliki test menambah 1 (default tidak)" },
                     { k: "catch", c: "+1", n: "Penanganan exception menambah jalur" },
                     { k: "ternary (?:)", c: "+1", n: "Operator kondisional menambah 1" },
                     { k: "&& / ||", c: "+1 / operator", n: "Short-circuit logic menambah decision points" },
@@ -195,16 +202,23 @@ export default function DocsPage() {
             - Volume: <InlineCode>V = N × log2(n)</InlineCode><br />
             - Difficulty: <InlineCode>D = (n1/2) × (N2/n2)</InlineCode><br />
             - Effort: <InlineCode>E = D × V</InlineCode><br />
-            - Est. Bugs: sering dipakai <InlineCode>B ≈ V / 3000</InlineCode> (heuristic umum)
+            - Est. Bugs: <InlineCode>B = V / 3000</InlineCode><br />
+            - Time to program (sec): <InlineCode>T = E / 18</InlineCode>
           </MiniCard>
         </div>
 
         <div className="rounded-xl border border-slate-800 bg-slate-950/40 p-5 shadow-xl">
           <div className="text-[11px] font-bold uppercase tracking-wider text-slate-300">Catatan implementasi</div>
           <p className="mt-2 text-sm text-slate-400 leading-relaxed">
-            Nilai Halstead berasal dari hasil parsing AST/token. Detail bisa berbeda tipis antar parser (mis. apa yang
-            dianggap operator/operand), tapi prinsipnya sama: semakin banyak vocabulary/length, volume & effort cenderung
-            naik.
+            Nilai Halstead berasal dari hasil parsing AST. Detail bisa berbeda antar tool karena definisi operator/operand
+            bisa berbeda. Di KodeMetrik:
+            <br />
+            - JavaScript: operator termasuk <InlineCode>call</InlineCode>, <InlineCode>new</InlineCode>,{" "}
+            <InlineCode>await</InlineCode>, <InlineCode>yield</InlineCode>, dan akses properti <InlineCode>.</InlineCode>.
+            Operand berasal dari identifier & literal, dengan pengecualian seperti nama deklarasi dan key properti non-computed.
+            <br />
+            - PHP: operator termasuk <InlineCode>call</InlineCode>, <InlineCode>new</InlineCode>, dan lookup{" "}
+            <InlineCode>{"->"}</InlineCode>. Operand berasal dari variabel, identifier, dan literal.
           </p>
         </div>
       </Section>
@@ -215,11 +229,40 @@ export default function DocsPage() {
             MI menggabungkan ukuran, kompleksitas, dan volume informasi menjadi skor ringkas. Skor lebih tinggi biasanya
             lebih baik (lebih mudah dirawat).
           </MiniCard>
-          <MiniCard title="Formula (umum)">
-            Varian formula MI cukup banyak. Umumnya memanfaatkan <InlineCode>V</InlineCode> (Halstead Volume),{" "}
-            <InlineCode>CC</InlineCode>, dan <InlineCode>LOC</InlineCode>. Tool ini memakai pendekatan yang konsisten
-            antar fungsi untuk perbandingan relatif dalam project.
+          <MiniCard title="Formula di KodeMetrik (heuristic)">
+            Skor 0..100 (clamp) untuk perbandingan relatif antar fungsi:
+            <br />
+            <InlineCode>MI = clamp(100 − 2×CC − 12×log10(1 + V), 0, 100)</InlineCode>
+            <br />
+            dengan <InlineCode>V</InlineCode> = Halstead Volume.
           </MiniCard>
+        </div>
+      </Section>
+
+      <Section id="references" title="Referensi & Metode">
+        <div className="grid gap-4 md:grid-cols-2">
+          <MiniCard title="Sumber konsep (akademik)">
+            - T. J. McCabe, <em>A Complexity Measure</em>, IEEE Transactions on Software Engineering, 1976.
+            <br />
+            <span className="text-xs text-slate-500">
+              (Cyclomatic Complexity; definisi graph <InlineCode>CC = E − N + 2P</InlineCode>).
+            </span>
+            <br />
+            <br />
+            - M. H. Halstead, <em>Elements of Software Science</em>, 1977.
+            <br />
+            <span className="text-xs text-slate-500">
+              (Halstead Software Science; vocabulary/length/volume/difficulty/effort).
+            </span>
+          </MiniCard>
+          <MiniCard title="Implementasi di KodeMetrik">
+            - CC dihitung dengan pendekatan <InlineCode>decision points</InlineCode> berbasis AST (praktis untuk static analysis).
+            <br />
+            - Halstead dihitung dari counting operator/operand berbasis AST; hasil bisa berbeda antar tool karena definisi token bisa berbeda.
+            <br />
+            - MI di KodeMetrik adalah <em>heuristic score</em> (bukan MI klasik) untuk perbandingan relatif.
+            <br />
+            </MiniCard>
         </div>
       </Section>
 

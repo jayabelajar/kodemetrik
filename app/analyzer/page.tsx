@@ -15,7 +15,7 @@ const MAX_FILES = 100;
 export default function AnalyzerPage() {
   const router = useRouter();
   const [mode, setMode] = useState<"paste" | "file" | "folder">("paste");
-  const [language, setLanguage] = useState<LanguageId>("javascript");
+  const [language, setLanguage] = useState<LanguageId>("php");
   const [code, setCode] = useState<string>("");
   const [inputs, setInputs] = useState<AnalyzeInput[]>([]);
   const [error, setError] = useState<string | null>(null);
@@ -247,8 +247,8 @@ export default function AnalyzerPage() {
           <div className="flex rounded-lg bg-slate-950 p-1 border border-slate-900">
             {(
               [
-                { id: "javascript", label: "JavaScript" },
                 { id: "php", label: "PHP" },
+                { id: "javascript", label: "JavaScript" },
               ] as const
             ).map((l) => {
               const disabled = mode !== "paste";

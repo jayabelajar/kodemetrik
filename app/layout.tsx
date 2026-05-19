@@ -4,7 +4,21 @@ import HeaderNav from "../components/HeaderNav";
 
 export const metadata: Metadata = {
   title: "KodeMetrik — Deep Source Code Complexity Analysis",
-  description: "High-performance developer tool to measure Cyclomatic Complexity, Halstead Metrics, and render interactive Control Flow Graphs client-side.",
+  description:
+    "High-performance developer tool to measure Cyclomatic Complexity, Halstead Metrics, and render interactive Control Flow Graphs client-side.",
+  metadataBase: new URL("https://kodemetrik.vercel.app"),
+  openGraph: {
+    title: "KodeMetrik",
+    description:
+      "Measure Cyclomatic Complexity, Halstead Metrics, and visualize Control Flow Graphs — fully client-side.",
+    type: "website",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "KodeMetrik",
+    description:
+      "Measure Cyclomatic Complexity, Halstead Metrics, and visualize Control Flow Graphs — fully client-side.",
+  },
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
@@ -26,7 +40,15 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           {/* Footer */}
           <footer className="w-full border-t border-slate-900 bg-slate-950/40 py-6 text-center text-xs text-slate-500 no-print">
             <div className="mx-auto max-w-6xl px-4 text-center">
-              © {new Date().getFullYear()} KodeMetrik. All rights reserved.
+              © {new Date().getFullYear()} KodeMetrik. All rights reserved. Created by {" "}
+              <a
+                href="https://github.com/jayabelajar/kodemetrik"
+                target="_blank"
+                rel="noreferrer"
+                className="text-slate-400 hover:text-slate-200 underline underline-offset-4"
+              >
+                 jayabelajar
+              </a>
             </div>
           </footer>
         </div>
@@ -34,3 +56,4 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     </html>
   );
 }
+
