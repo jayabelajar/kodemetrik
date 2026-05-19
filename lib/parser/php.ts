@@ -15,25 +15,33 @@ function getEndLine(node: any): number | undefined {
   return typeof node?.loc?.end?.line === "number" ? node.loc.end.line : undefined;
 }
 
-function walk(node: PhpNode, visit: (n: PhpNode) => void) {
+function walk(
+  node: PhpNode,
+  visit: (n: PhpNode, parent?: PhpNode) => void,
+  shouldDescend?: (n: PhpNode, parent?: PhpNode) => boolean,
+  parent?: PhpNode
+) {
   if (!node || typeof node !== "object") return;
-  visit(node);
+  visit(node, parent);
+  if (shouldDescend && !shouldDescend(node, parent)) return;
   for (const v of Object.values(node)) {
     if (Array.isArray(v)) {
-      for (const item of v) walk(item, visit);
+      for (const item of v) walk(item, visit, shouldDescend, node);
     } else if (v && typeof v === "object") {
-      walk(v, visit);
+      walk(v, visit, shouldDescend, node);
     }
   }
 }
 
 function cyclomaticForFunction(body: PhpNode): number {
   let complexity = baseComplexity();
-  walk(body, (n) => {
-    const kind = n?.kind;
-    if (!kind) return;
-    if (
-      kind === "if" ||
+  walk(
+    body,
+    (n) => {
+      const kind = n?.kind;
+      if (!kind) return;
+      if (
+        kind === "if" ||
       kind === "for" ||
       kind === "foreach" ||
       kind === "while" ||
@@ -43,9 +51,15 @@ function cyclomaticForFunction(body: PhpNode): number {
     ) {
       complexity = addDecision(complexity);
     }
-    if (kind === "case") complexity = addDecision(complexity);
-    if (kind === "bin" && (n.type === "&&" || n.type === "||")) complexity = addDecision(complexity);
-  });
+      if (kind === "case") complexity = addDecision(complexity);
+      if (kind === "bin" && (n.type === "&&" || n.type === "||")) complexity = addDecision(complexity);
+    },
+    (n) => {
+      // Exclude nested function-like scopes from parent metrics.
+      const kind = n?.kind;
+      return kind !== "function" && kind !== "method" && kind !== "closure" && kind !== "arrowfunc";
+    }
+  );
   return complexity;
 }
 
@@ -64,41 +78,61 @@ function cyclomaticBreakdownForFunction(body: PhpNode): NonNullable<FunctionRepo
     and: 0,
     or: 0,
   };
-  walk(body, (n) => {
-    const kind = n?.kind;
-    if (!kind) return;
-    if (kind === "if") breakdown.if += 1;
-    if (kind === "for") breakdown.for += 1;
-    if (kind === "foreach") breakdown.forOf += 1; // closest bucket
-    if (kind === "while") breakdown.while += 1;
-    if (kind === "do") breakdown.doWhile += 1;
-    if (kind === "case") breakdown.switchCase += 1;
-    if (kind === "catch") breakdown.catch += 1;
-    if (kind === "ternary") breakdown.ternary += 1;
-    if (kind === "bin" && n.type === "&&") breakdown.and += 1;
-    if (kind === "bin" && n.type === "||") breakdown.or += 1;
-  });
+  walk(
+    body,
+    (n) => {
+      const kind = n?.kind;
+      if (!kind) return;
+      if (kind === "if") breakdown.if += 1;
+      if (kind === "for") breakdown.for += 1;
+      if (kind === "foreach") breakdown.forOf += 1; // closest bucket
+      if (kind === "while") breakdown.while += 1;
+      if (kind === "do") breakdown.doWhile += 1;
+      if (kind === "case") breakdown.switchCase += 1;
+      if (kind === "catch") breakdown.catch += 1;
+      if (kind === "ternary") breakdown.ternary += 1;
+      if (kind === "bin" && n.type === "&&") breakdown.and += 1;
+      if (kind === "bin" && n.type === "||") breakdown.or += 1;
+    },
+    (n) => {
+      const kind = n?.kind;
+      return kind !== "function" && kind !== "method" && kind !== "closure" && kind !== "arrowfunc";
+    }
+  );
   return breakdown;
 }
 
 function halsteadForFunction(body: PhpNode): HalsteadCounts {
   const operators: string[] = [];
   const operands: string[] = [];
-  walk(body, (n) => {
-    const kind = n?.kind;
-    if (!kind) return;
-    if (kind === "bin") operators.push(String(n.type ?? "bin"));
-    if (kind === "assign") operators.push("=");
-    if (kind === "unary") operators.push(String(n.type ?? "unary"));
-    if (kind === "call") operators.push("call");
-    if (kind === "propertylookup" || kind === "staticlookup") operators.push("->");
-    if (kind === "variable") operands.push(String(n.name ?? "$var"));
-    if (kind === "identifier") operands.push(String(n.name ?? "id"));
-    if (kind === "number") operands.push(String(n.value));
-    if (kind === "string") operands.push(JSON.stringify(n.value));
-    if (kind === "boolean") operands.push(String(n.value));
-    if (kind === "nullkeyword") operands.push("null");
-  });
+  walk(
+    body,
+    (n, parent) => {
+      const kind = n?.kind;
+      if (!kind) return;
+      if (kind === "bin") operators.push(String(n.type ?? "bin"));
+      if (kind === "assign") operators.push(String(n.operator ?? "="));
+      if (kind === "unary") operators.push(String(n.type ?? "unary"));
+      if (kind === "call") operators.push("call");
+      if (kind === "new") operators.push("new");
+      if (kind === "propertylookup" || kind === "staticlookup") operators.push("->");
+
+      // Operands
+      if (kind === "variable") operands.push(String(n.name ?? "$var"));
+      // avoid counting function/method declaration names as operands (non-executable token for this scope)
+      if (kind === "identifier" && parent?.kind !== "function" && parent?.kind !== "method") {
+        operands.push(String(n.name ?? "id"));
+      }
+      if (kind === "number") operands.push(String(n.value));
+      if (kind === "string") operands.push(JSON.stringify(n.value));
+      if (kind === "boolean") operands.push(String(n.value));
+      if (kind === "nullkeyword") operands.push("null");
+    },
+    (n) => {
+      const kind = n?.kind;
+      return kind !== "function" && kind !== "method" && kind !== "closure" && kind !== "arrowfunc";
+    }
+  );
   return { operators, operands };
 }
 

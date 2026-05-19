@@ -31,13 +31,19 @@ function DecisionItem({ label, value }: { label: string; value: number }) {
 export default function FunctionDetail({
   fn,
   onClose,
+  initialTab,
 }: {
   fn: FunctionReport;
   onClose: () => void;
+  initialTab?: "overview" | "cyclomatic" | "halstead" | "cfg";
 }) {
-  const [tab, setTab] = useState<"overview" | "cyclomatic" | "halstead" | "cfg">("overview");
+  const [tab, setTab] = useState<"overview" | "cyclomatic" | "halstead" | "cfg">(initialTab ?? "overview");
   const halstead = fn.halstead;
   const breakdown = fn.cyclomaticBreakdown;
+
+  useEffect(() => {
+    if (initialTab) setTab(initialTab);
+  }, [initialTab, fn]);
 
   // Handle ESC key for premium accessibility
   useEffect(() => {
@@ -284,4 +290,3 @@ export default function FunctionDetail({
     </div>
   );
 }
-

@@ -10,7 +10,13 @@ function pill(status: FunctionReport["complexityStatus"]) {
   return "bg-red-500/10 text-red-400 border-red-500/20";
 }
 
-export default function MetricTable({ rows }: { rows: FunctionReport[] }) {
+export default function MetricTable({
+  rows,
+  initialDetailTab,
+}: {
+  rows: FunctionReport[];
+  initialDetailTab?: "overview" | "cyclomatic" | "halstead" | "cfg";
+}) {
   const [selected, setSelected] = useState<FunctionReport | null>(null);
   const [search, setSearch] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
@@ -146,9 +152,9 @@ export default function MetricTable({ rows }: { rows: FunctionReport[] }) {
         <span>Tip: Click any row to view structural Control Flow Graph, AST nodes breakdown, and metrics details.</span>
       </div>
 
-      {selected ? <FunctionDetail fn={selected} onClose={() => setSelected(null)} /> : null}
+      {selected ? (
+        <FunctionDetail fn={selected} onClose={() => setSelected(null)} initialTab={initialDetailTab} />
+      ) : null}
     </div>
   );
 }
-
-

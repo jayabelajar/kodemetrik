@@ -32,8 +32,13 @@ function functionName(path: NodePath<t.Function | t.ArrowFunctionExpression>): s
 function collectHalsteadForFunction(path: NodePath<any>): HalsteadCounts {
   const operators: string[] = [];
   const operands: string[] = [];
+  const rootNode = path.node;
 
   path.traverse({
+    enter(p) {
+      // Exclude nested functions from *this* function's metrics.
+      if (p.isFunction() && p.node !== rootNode) p.skip();
+    },
     BinaryExpression(p) {
       operators.push(p.node.operator);
     },
@@ -55,10 +60,58 @@ function collectHalsteadForFunction(path: NodePath<any>): HalsteadCounts {
     CallExpression() {
       operators.push("call");
     },
+    NewExpression() {
+      operators.push("new");
+    },
+    AwaitExpression() {
+      operators.push("await");
+    },
+    YieldExpression() {
+      operators.push("yield");
+    },
     MemberExpression() {
       operators.push(".");
     },
+    ThisExpression() {
+      operands.push("this");
+    },
+    Super() {
+      operands.push("super");
+    },
     Identifier(p) {
+      const parent = p.parentPath;
+      // Skip non-semantic identifiers that should not count as operands.
+      // - declaration/binding names (fn name, params, var decl)
+      // - non-computed property keys (obj.{key})
+      // - import/export specifiers
+      // - labels (label:)
+      // - type-only nodes (TS)
+      if (parent?.isFunctionDeclaration() && p.key === "id") return;
+      if (parent?.isFunctionExpression() && p.key === "id") return;
+      if (parent?.isClassDeclaration() && p.key === "id") return;
+      if (parent?.isClassExpression() && p.key === "id") return;
+      if (parent?.isVariableDeclarator() && p.key === "id") return;
+      if (parent?.isRestElement() && p.key === "argument") return;
+      if (parent?.isObjectProperty() && p.key === "key" && !(parent.node as any).computed) return;
+      if (parent?.isObjectMethod() && p.key === "key" && !(parent.node as any).computed) return;
+      if (parent?.isClassMethod() && p.key === "key" && !(parent.node as any).computed) return;
+      if (parent?.isClassProperty?.() && p.key === "key" && !(parent.node as any).computed) return;
+      if (parent?.isMemberExpression() && p.key === "property" && !(parent.node as any).computed) return;
+      if (
+        parent?.isImportSpecifier?.() ||
+        parent?.isImportDefaultSpecifier?.() ||
+        parent?.isImportNamespaceSpecifier?.() ||
+        parent?.isExportSpecifier?.()
+      ) {
+        return;
+      }
+      if (parent?.isLabeledStatement() && p.key === "label") return;
+      if (parent?.isTSInterfaceDeclaration?.()) return;
+      if (parent?.isTSTypeAliasDeclaration?.()) return;
+      if (parent?.isTSTypeParameter?.()) return;
+      if (parent?.isTSTypeParameterDeclaration?.()) return;
+      if (parent?.isTSTypeParameterInstantiation?.()) return;
+
       operands.push(p.node.name);
     },
     StringLiteral(p) {
@@ -94,8 +147,13 @@ function cyclomaticForFunction(path: NodePath<any>): { score: number; breakdown:
     and: 0,
     or: 0,
   };
+  const rootNode = path.node;
 
   path.traverse({
+    enter(p) {
+      // Exclude nested functions from *this* function's metrics.
+      if (p.isFunction() && p.node !== rootNode) p.skip();
+    },
     IfStatement(p: NodePath<t.IfStatement>) {
       complexity = addDecision(complexity);
       breakdown.if += 1;

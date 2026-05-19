@@ -1,9 +1,10 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import type { AnalysisReport, ComplexityStatus, FunctionReport } from "@/types/analysis";
 import MetricTable from "@/components/MetricTable";
 import ResultCard from "@/components/ResultCard";
+import FunctionDetailInline from "@/components/FunctionDetailInline";
 
 type FileRow = {
   filePath: string;
@@ -117,9 +118,49 @@ function StatusPill({ status }: { status: ComplexityStatus }) {
 }
 
 export default function ResultTabs({ report }: { report: AnalysisReport }) {
-  const [tab, setTab] = useState<"overview" | "functions" | "files" | "charts">("overview");
+  type TabId = "overview" | "functions" | "files" | "charts" | "cyclomatic" | "halstead" | "cfg";
+  const [tab, setTab] = useState<TabId>("overview");
   const [filePage, setFilePage] = useState(1);
   const filesPerPage = 20;
+  const isSingleInput = report.summary.totalFiles <= 1;
+  const [selectedFnKey, setSelectedFnKey] = useState<string>("");
+
+  const selectedFn = useMemo(() => {
+    if (report.functions.length === 0) return null;
+    const byKey = report.functions.find((f) => `${f.filePath}:${f.functionName}:${f.startLine ?? 0}` === selectedFnKey);
+    return byKey ?? report.functions[0];
+  }, [report.functions, selectedFnKey]);
+
+  useEffect(() => {
+    if (!isSingleInput) return;
+    if (report.functions.length === 0) return;
+    const firstKey = `${report.functions[0].filePath}:${report.functions[0].functionName}:${report.functions[0].startLine ?? 0}`;
+    if (!selectedFnKey) setSelectedFnKey(firstKey);
+  }, [isSingleInput, report.functions, selectedFnKey]);
+
+  const tabs = useMemo(() => {
+    if (isSingleInput) {
+      return [
+        ["overview", "Overview", <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><rect x="3" y="3" width="7" height="9"/><rect x="14" y="3" width="7" height="5"/><rect x="14" y="12" width="7" height="9"/><rect x="3" y="16" width="7" height="5"/></svg>],
+        ["cyclomatic", "McCabe Complexity", <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M4 6h16"/><path d="M7 12h10"/><path d="M10 18h4"/></svg>],
+        ["halstead", "Halstead Metrics", <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M3 3v18h18"/><path d="M7 14h3"/><path d="M7 10h7"/><path d="M7 18h10"/></svg>],
+        ["cfg", "Control Flow Graph (CFG)", <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><circle cx="7" cy="7" r="3"/><circle cx="17" cy="17" r="3"/><path d="M10 7h4a3 3 0 0 1 3 3v4"/><path d="M14 7a3 3 0 0 0-3 3v4"/></svg>],
+        ["files", "Files Report", <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/><path d="M16 13H8"/><path d="M16 17H8"/><path d="M10 9H8"/></svg>],
+      ] as const;
+    }
+    return [
+      ["overview", "Overview", <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><rect x="3" y="3" width="7" height="9"/><rect x="14" y="3" width="7" height="5"/><rect x="14" y="12" width="7" height="9"/><rect x="3" y="16" width="7" height="5"/></svg>],
+      ["functions", "Functions & Metrics", <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" x2="12" y1="22.08" y2="12"/></svg>],
+      ["files", "Files Report", <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/><path d="M16 13H8"/><path d="M16 17H8"/><path d="M10 9H8"/></svg>],
+      ["charts", "Charts & Insights", <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg>],
+    ] as const;
+  }, [isSingleInput]);
+
+  useEffect(() => {
+    const allowed = new Set(tabs.map((t) => t[0]));
+    if (!allowed.has(tab)) setTab("overview");
+    setFilePage(1);
+  }, [tabs, tab]);
 
   const statusCounts = useMemo(() => {
     const good = report.functions.filter((f) => f.complexityStatus === "good").length;
@@ -174,14 +215,7 @@ export default function ResultTabs({ report }: { report: AnalysisReport }) {
       {/* Dashboard Subheader Navigation Tabs */}
       <div className="flex flex-wrap items-center justify-between gap-4 border-b border-slate-900 pb-3 no-print">
         <div className="flex flex-wrap rounded-lg bg-slate-900/60 p-1 border border-slate-800/80">
-          {(
-            [
-              ["overview", "Overview", <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><rect x="3" y="3" width="7" height="9"/><rect x="14" y="3" width="7" height="5"/><rect x="14" y="12" width="7" height="9"/><rect x="3" y="16" width="7" height="5"/></svg>],
-              ["functions", "Functions & Metrics", <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" x2="12" y1="22.08" y2="12"/></svg>],
-              ["files", "Files Report", <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/><path d="M16 13H8"/><path d="M16 17H8"/><path d="M10 9H8"/></svg>],
-              ["charts", "Charts & Insights", <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg>],
-            ] as const
-          ).map(([id, label, icon]) => (
+          {tabs.map(([id, label, icon]) => (
             <button
               key={id}
               type="button"
@@ -364,11 +398,85 @@ export default function ResultTabs({ report }: { report: AnalysisReport }) {
               </div>
             </div>
           </div>
+
+          {isSingleInput ? (
+            <div className="space-y-4">
+              <div className="flex flex-wrap items-end justify-between gap-3">
+                <div className="space-y-1">
+                  <h3 className="text-xs font-bold uppercase tracking-wider text-slate-300">Selected Function</h3>
+                  <p className="text-[11px] text-slate-500">Overview ringkas untuk function yang dipilih.</p>
+                </div>
+                {report.functions.length > 1 ? (
+                  <label className="text-[10px] font-mono text-slate-500">
+                    Function
+                    <select
+                      className="ml-2 rounded-md border border-slate-800 bg-slate-950 px-2 py-1 text-[11px] text-slate-200 outline-none focus:border-slate-700"
+                      value={selectedFnKey}
+                      onChange={(e) => setSelectedFnKey(e.target.value)}
+                    >
+                      {report.functions.map((f) => {
+                        const key = `${f.filePath}:${f.functionName}:${f.startLine ?? 0}`;
+                        const label = `${f.functionName}${typeof f.startLine === "number" ? ` (L${f.startLine})` : ""}`;
+                        return (
+                          <option key={key} value={key}>
+                            {label}
+                          </option>
+                        );
+                      })}
+                    </select>
+                  </label>
+                ) : null}
+              </div>
+              {selectedFn ? <FunctionDetailInline fn={selectedFn} tab="overview" /> : null}
+            </div>
+          ) : null}
         </div>
       ) : null}
 
-      {/* Functions Tab (Renders MetricTable) */}
-      {tab === "functions" ? (
+      {/* Single-input detail tabs (uses the same function list; click to open matching detail tab) */}
+      {isSingleInput && (tab === "cyclomatic" || tab === "halstead" || tab === "cfg") ? (
+        <div className="space-y-4">
+          <div className="flex flex-wrap items-end justify-between gap-3">
+            <div className="space-y-1">
+              <h3 className="text-xs font-bold uppercase tracking-wider text-slate-300">
+                {tab === "cyclomatic" ? "McCabe Complexity" : tab === "halstead" ? "Halstead Metrics" : "Control Flow Graph (CFG)"}
+              </h3>
+              <p className="text-[11px] text-slate-500">
+                Hasil analisis langsung untuk function yang dipilih (tanpa buka modal detail).
+              </p>
+            </div>
+            {report.functions.length > 1 ? (
+              <label className="text-[10px] font-mono text-slate-500">
+                Function
+                <select
+                  className="ml-2 rounded-md border border-slate-800 bg-slate-950 px-2 py-1 text-[11px] text-slate-200 outline-none focus:border-slate-700"
+                  value={selectedFnKey}
+                  onChange={(e) => setSelectedFnKey(e.target.value)}
+                >
+                  {report.functions.map((f) => {
+                    const key = `${f.filePath}:${f.functionName}:${f.startLine ?? 0}`;
+                    const label = `${f.functionName}${typeof f.startLine === "number" ? ` (L${f.startLine})` : ""}`;
+                    return (
+                      <option key={key} value={key}>
+                        {label}
+                      </option>
+                    );
+                  })}
+                </select>
+              </label>
+            ) : null}
+          </div>
+          {selectedFn ? (
+            <FunctionDetailInline
+              fn={selectedFn}
+              tab={tab === "cyclomatic" ? "cyclomatic" : tab === "halstead" ? "halstead" : "cfg"}
+            />
+          ) : null}
+        </div>
+      ) : null}
+
+      {/* Multi-file mode Functions Tab (Renders MetricTable) */}
+      {!isSingleInput && tab === "functions" ? (
         <div className="space-y-4">
           <MetricTable rows={report.functions} />
         </div>
@@ -448,7 +556,7 @@ export default function ResultTabs({ report }: { report: AnalysisReport }) {
       ) : null}
 
       {/* Charts Tab */}
-      {tab === "charts" ? (
+      {!isSingleInput && tab === "charts" ? (
         <div className="grid gap-6 md:grid-cols-2">
           <SimpleBarChart title="Top 8 Cyclomatic Complexity (McCabe)" items={topComplexity} />
           <SimpleBarChart title="Top 8 Halstead Mental Effort" items={topEffort} />
