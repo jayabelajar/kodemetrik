@@ -614,7 +614,7 @@ export default function ResultTabs({ report }: { report: AnalysisReport }) {
                             {f.functionName}
                           </td>
                           <td className="px-4 py-3 text-center font-mono text-slate-300">
-                            {typeof f.startLine === "number" ? f.startLine : "?"}â€“{typeof f.endLine === "number" ? f.endLine : "?"}
+                            {typeof f.startLine === "number" ? f.startLine : "?"}-{typeof f.endLine === "number" ? f.endLine : "?"}
                           </td>
                           <td className="px-4 py-3 text-center font-mono font-bold text-slate-100">{f.cyclomatic}</td>
                           <td className="px-4 py-3 text-center font-mono text-slate-300">{Math.round(f.maintainabilityScore)}</td>
