@@ -124,6 +124,7 @@ export default function ResultTabs({ report }: { report: AnalysisReport }) {
   const filesPerPage = 20;
   const isSingleInput = report.summary.totalFiles <= 1;
   const [selectedFnKey, setSelectedFnKey] = useState<string>("");
+  const [selectedFilePath, setSelectedFilePath] = useState<string>("");
 
   const selectedFn = useMemo(() => {
     if (report.functions.length === 0) return null;
@@ -184,11 +185,25 @@ export default function ResultTabs({ report }: { report: AnalysisReport }) {
 
   const fileRows = useMemo(() => fileRowsFromFunctions(report.functions), [report.functions]);
 
+  useEffect(() => {
+    if (tab !== "files") return;
+    if (selectedFilePath) return;
+    if (fileRows.length === 0) return;
+    setSelectedFilePath(fileRows[0].filePath);
+  }, [tab, selectedFilePath, fileRows]);
+
   const totalFilePages = Math.ceil(fileRows.length / filesPerPage) || 1;
   const paginatedFileRows = useMemo(() => {
     const start = (filePage - 1) * filesPerPage;
     return fileRows.slice(start, start + filesPerPage);
   }, [fileRows, filePage]);
+
+  const selectedFileFunctions = useMemo(() => {
+    if (!selectedFilePath) return [];
+    return [...report.functions]
+      .filter((f) => f.filePath === selectedFilePath)
+      .sort((a, b) => b.cyclomatic - a.cyclomatic);
+  }, [report.functions, selectedFilePath]);
 
   const topComplexity = useMemo(
     () =>
@@ -484,7 +499,8 @@ export default function ResultTabs({ report }: { report: AnalysisReport }) {
 
       {/* Files Tab (Renders detailed file statistics) */}
       {tab === "files" ? (
-        <div className="overflow-hidden rounded-xl border border-slate-800 bg-slate-950/40 shadow-xl">
+        <div className="space-y-4">
+          <div className="overflow-hidden rounded-xl border border-slate-800 bg-slate-950/40 shadow-xl">
           <div className="overflow-x-auto">
             <table className="min-w-full border-collapse text-left text-xs">
               <thead className="border-b border-slate-900 bg-slate-900/40">
@@ -501,7 +517,15 @@ export default function ResultTabs({ report }: { report: AnalysisReport }) {
               <tbody className="divide-y divide-slate-900">
                 {paginatedFileRows.length > 0 ? (
                   paginatedFileRows.map((r) => (
-                    <tr key={r.filePath} className="hover:bg-slate-900/20 transition-colors">
+                    <tr
+                      key={r.filePath}
+                      className={[
+                        "hover:bg-slate-900/20 transition-colors cursor-pointer",
+                        selectedFilePath === r.filePath ? "bg-slate-900/25" : "",
+                      ].join(" ")}
+                      onClick={() => setSelectedFilePath(r.filePath)}
+                      title="Click to view functions inside this file"
+                    >
                       <td className="px-4 py-3 font-mono text-slate-300 max-w-[340px] truncate" title={r.filePath}>
                         {r.filePath}
                       </td>
@@ -552,6 +576,63 @@ export default function ResultTabs({ report }: { report: AnalysisReport }) {
               </div>
             </div>
           )}
+          </div>
+
+          {selectedFilePath ? (
+            <div className="overflow-hidden rounded-xl border border-slate-800 bg-slate-950/40 shadow-xl">
+              <div className="flex items-center justify-between gap-3 border-b border-slate-900 bg-slate-900/30 px-4 py-3">
+                <div className="min-w-0">
+                  <div className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Selected File</div>
+                  <div className="mt-0.5 truncate font-mono text-xs text-slate-200" title={selectedFilePath}>
+                    {selectedFilePath}
+                  </div>
+                </div>
+                <div className="text-[11px] font-mono text-slate-500">
+                  Functions: <span className="text-slate-300">{selectedFileFunctions.length}</span>
+                </div>
+              </div>
+
+              <div className="overflow-x-auto">
+                <table className="min-w-full border-collapse text-left text-xs">
+                  <thead className="border-b border-slate-900 bg-slate-900/20">
+                    <tr className="font-bold uppercase tracking-wider text-slate-400 text-[10px]">
+                      <th className="px-4 py-3">Function</th>
+                      <th className="px-4 py-3 text-center">Lines</th>
+                      <th className="px-4 py-3 text-center">CC</th>
+                      <th className="px-4 py-3 text-center">MI</th>
+                      <th className="px-4 py-3">Status</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-900">
+                    {selectedFileFunctions.length > 0 ? (
+                      selectedFileFunctions.map((f) => (
+                        <tr
+                          key={`${f.filePath}:${f.functionName}:${f.startLine ?? 0}`}
+                          className="hover:bg-slate-900/20 transition-colors"
+                        >
+                          <td className="px-4 py-3 font-mono text-slate-200 max-w-[420px] truncate" title={f.functionName}>
+                            {f.functionName}
+                          </td>
+                          <td className="px-4 py-3 text-center font-mono text-slate-300">
+                            {typeof f.startLine === "number" ? f.startLine : "?"}â€“{typeof f.endLine === "number" ? f.endLine : "?"}
+                          </td>
+                          <td className="px-4 py-3 text-center font-mono font-bold text-slate-100">{f.cyclomatic}</td>
+                          <td className="px-4 py-3 text-center font-mono text-slate-300">{Math.round(f.maintainabilityScore)}</td>
+                          <td className="px-4 py-3">
+                            <StatusPill status={f.complexityStatus} />
+                          </td>
+                        </tr>
+                      ))
+                    ) : (
+                      <tr>
+                        <td colSpan={5} className="py-8 text-center text-slate-500">No functions found in this file.</td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          ) : null}
         </div>
       ) : null}
 
