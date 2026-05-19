@@ -15,7 +15,7 @@ export default function MetricTable({
   initialDetailTab,
 }: {
   rows: FunctionReport[];
-  initialDetailTab?: "overview" | "cyclomatic" | "halstead" | "cfg";
+  initialDetailTab?: "cyclomatic" | "halstead";
 }) {
   const [selected, setSelected] = useState<FunctionReport | null>(null);
   const [search, setSearch] = useState("");

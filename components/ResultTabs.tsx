@@ -2,9 +2,9 @@
 
 import { useEffect, useMemo, useState } from "react";
 import type { AnalysisReport, ComplexityStatus, FunctionReport } from "@/types/analysis";
-import MetricTable from "@/components/MetricTable";
 import ResultCard from "@/components/ResultCard";
 import FunctionDetailInline from "@/components/FunctionDetailInline";
+import FunctionDetail from "@/components/FunctionDetail";
 
 type FileRow = {
   filePath: string;
@@ -118,42 +118,49 @@ function StatusPill({ status }: { status: ComplexityStatus }) {
 }
 
 export default function ResultTabs({ report }: { report: AnalysisReport }) {
-  type TabId = "overview" | "functions" | "files" | "charts" | "cyclomatic" | "halstead" | "cfg";
+  type TabId = "overview" | "files" | "charts" | "cyclomatic" | "halstead" | "cfg";
   const [tab, setTab] = useState<TabId>("overview");
   const [filePage, setFilePage] = useState(1);
   const filesPerPage = 20;
   const isSingleInput = report.summary.totalFiles <= 1;
-  const [selectedFnKey, setSelectedFnKey] = useState<string>("");
   const [selectedFilePath, setSelectedFilePath] = useState<string>("");
+  const [metricDataTab, setMetricDataTab] = useState<"perFunction" | "summary">("perFunction");
+  const [detailFn, setDetailFn] = useState<FunctionReport | null>(null);
+  const [detailInitialTab, setDetailInitialTab] = useState<"cyclomatic" | "halstead">("cyclomatic");
+  const [selectedCfgFnKey, setSelectedCfgFnKey] = useState<string>("");
 
-  const selectedFn = useMemo(() => {
-    if (report.functions.length === 0) return null;
-    const byKey = report.functions.find((f) => `${f.filePath}:${f.functionName}:${f.startLine ?? 0}` === selectedFnKey);
-    return byKey ?? report.functions[0];
-  }, [report.functions, selectedFnKey]);
+  const selectedCfgFn = useMemo(() => {
+    if (!selectedCfgFnKey) return report.functions[0] ?? null;
+    const found = report.functions.find((f) => `${f.filePath}:${f.functionName}:${f.startLine ?? 0}` === selectedCfgFnKey);
+    return found ?? report.functions[0] ?? null;
+  }, [report.functions, selectedCfgFnKey]);
 
   useEffect(() => {
-    if (!isSingleInput) return;
+    if (tab !== "cfg") return;
     if (report.functions.length === 0) return;
+    if (selectedCfgFnKey) return;
     const firstKey = `${report.functions[0].filePath}:${report.functions[0].functionName}:${report.functions[0].startLine ?? 0}`;
-    if (!selectedFnKey) setSelectedFnKey(firstKey);
-  }, [isSingleInput, report.functions, selectedFnKey]);
+    setSelectedCfgFnKey(firstKey);
+  }, [tab, report.functions, selectedCfgFnKey]);
 
   const tabs = useMemo(() => {
-    if (isSingleInput) {
+    if (!isSingleInput) {
       return [
         ["overview", "Overview", <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><rect x="3" y="3" width="7" height="9"/><rect x="14" y="3" width="7" height="5"/><rect x="14" y="12" width="7" height="9"/><rect x="3" y="16" width="7" height="5"/></svg>],
         ["cyclomatic", "McCabe Complexity", <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M4 6h16"/><path d="M7 12h10"/><path d="M10 18h4"/></svg>],
         ["halstead", "Halstead Metrics", <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M3 3v18h18"/><path d="M7 14h3"/><path d="M7 10h7"/><path d="M7 18h10"/></svg>],
         ["cfg", "Control Flow Graph (CFG)", <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><circle cx="7" cy="7" r="3"/><circle cx="17" cy="17" r="3"/><path d="M10 7h4a3 3 0 0 1 3 3v4"/><path d="M14 7a3 3 0 0 0-3 3v4"/></svg>],
         ["files", "Files Report", <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/><path d="M16 13H8"/><path d="M16 17H8"/><path d="M10 9H8"/></svg>],
+        ["charts", "Charts & Insights", <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg>],
       ] as const;
     }
+
     return [
       ["overview", "Overview", <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><rect x="3" y="3" width="7" height="9"/><rect x="14" y="3" width="7" height="5"/><rect x="14" y="12" width="7" height="9"/><rect x="3" y="16" width="7" height="5"/></svg>],
-      ["functions", "Functions & Metrics", <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" x2="12" y1="22.08" y2="12"/></svg>],
+      ["cyclomatic", "McCabe Complexity", <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M4 6h16"/><path d="M7 12h10"/><path d="M10 18h4"/></svg>],
+      ["halstead", "Halstead Metrics", <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M3 3v18h18"/><path d="M7 14h3"/><path d="M7 10h7"/><path d="M7 18h10"/></svg>],
+      ["cfg", "Control Flow Graph (CFG)", <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><circle cx="7" cy="7" r="3"/><circle cx="17" cy="17" r="3"/><path d="M10 7h4a3 3 0 0 1 3 3v4"/><path d="M14 7a3 3 0 0 0-3 3v4"/></svg>],
       ["files", "Files Report", <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/><path d="M16 13H8"/><path d="M16 17H8"/><path d="M10 9H8"/></svg>],
-      ["charts", "Charts & Insights", <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg>],
     ] as const;
   }, [isSingleInput]);
 
@@ -161,6 +168,7 @@ export default function ResultTabs({ report }: { report: AnalysisReport }) {
     const allowed = new Set(tabs.map((t) => t[0]));
     if (!allowed.has(tab)) setTab("overview");
     setFilePage(1);
+    setMetricDataTab("perFunction");
   }, [tabs, tab]);
 
   const statusCounts = useMemo(() => {
@@ -174,6 +182,32 @@ export default function ResultTabs({ report }: { report: AnalysisReport }) {
     () => report.functions.reduce((s, f) => s + (f.halstead.estimatedBugs || 0), 0),
     [report.functions],
   );
+
+  const halsteadFileRows = useMemo(() => {
+    const map = new Map<string, FunctionReport[]>();
+    for (const fn of report.functions) {
+      const list = map.get(fn.filePath) ?? [];
+      list.push(fn);
+      map.set(fn.filePath, list);
+    }
+
+    const rows = [...map.entries()].map(([filePath, list]) => {
+      const totalFunctions = list.length;
+      const avgVolume = list.reduce((s, f) => s + f.halstead.volume, 0) / Math.max(1, totalFunctions);
+      const avgEffort = list.reduce((s, f) => s + f.halstead.effort, 0) / Math.max(1, totalFunctions);
+      const avgDifficulty = list.reduce((s, f) => s + f.halstead.difficulty, 0) / Math.max(1, totalFunctions);
+      const totalEstimatedBugs = list.reduce((s, f) => s + (f.halstead.estimatedBugs || 0), 0);
+      return { filePath, totalFunctions, avgVolume, avgEffort, avgDifficulty, totalEstimatedBugs };
+    });
+
+    rows.sort((a, b) => b.avgEffort - a.avgEffort);
+    return rows;
+  }, [report.functions]);
+
+  function openDetail(fn: FunctionReport, initialTab: "cyclomatic" | "halstead") {
+    setDetailFn(fn);
+    setDetailInitialTab(initialTab);
+  }
 
   const highRiskFunctions = useMemo(
     () =>
@@ -414,86 +448,274 @@ export default function ResultTabs({ report }: { report: AnalysisReport }) {
             </div>
           </div>
 
-          {isSingleInput ? (
-            <div className="space-y-4">
-              <div className="flex flex-wrap items-end justify-between gap-3">
-                <div className="space-y-1">
-                  <h3 className="text-xs font-bold uppercase tracking-wider text-slate-300">Selected Function</h3>
-                  <p className="text-[11px] text-slate-500">Overview ringkas untuk function yang dipilih.</p>
-                </div>
-                {report.functions.length > 1 ? (
-                  <label className="text-[10px] font-mono text-slate-500">
-                    Function
-                    <select
-                      className="ml-2 rounded-md border border-slate-800 bg-slate-950 px-2 py-1 text-[11px] text-slate-200 outline-none focus:border-slate-700"
-                      value={selectedFnKey}
-                      onChange={(e) => setSelectedFnKey(e.target.value)}
-                    >
-                      {report.functions.map((f) => {
-                        const key = `${f.filePath}:${f.functionName}:${f.startLine ?? 0}`;
-                        const label = `${f.functionName}${typeof f.startLine === "number" ? ` (L${f.startLine})` : ""}`;
-                        return (
-                          <option key={key} value={key}>
-                            {label}
-                          </option>
-                        );
-                      })}
-                    </select>
-                  </label>
-                ) : null}
-              </div>
-              {selectedFn ? <FunctionDetailInline fn={selectedFn} tab="overview" /> : null}
-            </div>
-          ) : null}
         </div>
       ) : null}
 
-      {/* Single-input detail tabs (uses the same function list; click to open matching detail tab) */}
-      {isSingleInput && (tab === "cyclomatic" || tab === "halstead" || tab === "cfg") ? (
+      {/* Metric tabs (Per Function vs Ringkasan) */}
+      {tab === "cyclomatic" || tab === "halstead" ? (
         <div className="space-y-4">
           <div className="flex flex-wrap items-end justify-between gap-3">
             <div className="space-y-1">
               <h3 className="text-xs font-bold uppercase tracking-wider text-slate-300">
-                {tab === "cyclomatic" ? "McCabe Complexity" : tab === "halstead" ? "Halstead Metrics" : "Control Flow Graph (CFG)"}
+                {tab === "cyclomatic" ? "McCabe Complexity (CC)" : "Halstead Metrics"}
               </h3>
               <p className="text-[11px] text-slate-500">
-                Hasil analisis langsung untuk function yang dipilih (tanpa buka modal detail).
+                {metricDataTab === "perFunction"
+                  ? "Data per function + action untuk lihat detail."
+                  : "Ringkasan agregasi per file dari data metrics."}
               </p>
             </div>
-            {report.functions.length > 1 ? (
-              <label className="text-[10px] font-mono text-slate-500">
-                Function
-                <select
-                  className="ml-2 rounded-md border border-slate-800 bg-slate-950 px-2 py-1 text-[11px] text-slate-200 outline-none focus:border-slate-700"
-                  value={selectedFnKey}
-                  onChange={(e) => setSelectedFnKey(e.target.value)}
-                >
-                  {report.functions.map((f) => {
-                    const key = `${f.filePath}:${f.functionName}:${f.startLine ?? 0}`;
-                    const label = `${f.functionName}${typeof f.startLine === "number" ? ` (L${f.startLine})` : ""}`;
-                    return (
-                      <option key={key} value={key}>
-                        {label}
-                      </option>
-                    );
-                  })}
-                </select>
-              </label>
-            ) : null}
+
           </div>
-          {selectedFn ? (
-            <FunctionDetailInline
-              fn={selectedFn}
-              tab={tab === "cyclomatic" ? "cyclomatic" : tab === "halstead" ? "halstead" : "cfg"}
-            />
-          ) : null}
+
+          <div className="flex flex-wrap items-center justify-between gap-3 no-print">
+            <div className="flex flex-wrap rounded-lg bg-slate-900/60 p-1 border border-slate-800/80">
+              {[
+                ["perFunction", "Per Function"],
+                ["summary", "Ringkasan"],
+              ].map(([id, label]) => (
+                <button
+                  key={id}
+                  type="button"
+                  onClick={() => setMetricDataTab(id as any)}
+                  className={[
+                    "flex items-center gap-1.5 rounded-md px-3.5 py-1.5 text-xs font-semibold transition-all duration-150",
+                    metricDataTab === id
+                      ? "bg-slate-950 text-slate-50 border border-slate-800 shadow-sm"
+                      : "text-slate-400 hover:text-slate-200",
+                  ].join(" ")}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+
+            <div className="text-[10px] font-mono text-slate-500">
+              {metricDataTab === "perFunction" ? `Functions: ${report.summary.totalFunctions}` : `Files: ${report.summary.totalFiles}`}
+            </div>
+          </div>
+
+          {metricDataTab === "perFunction" ? (
+            <div className="overflow-hidden rounded-xl border border-slate-800 bg-slate-950/40 shadow-xl">
+              <div className="overflow-x-auto">
+                <table className="min-w-full border-collapse text-left text-xs">
+                  <thead className="border-b border-slate-900 bg-slate-900/40">
+                    <tr className="font-bold uppercase tracking-wider text-slate-400 text-[10px]">
+                      {!isSingleInput ? <th className="px-4 py-3">File Path</th> : null}
+                      <th className="px-4 py-3">Function Name</th>
+                      {tab === "cyclomatic" ? (
+                        <>
+                          <th className="px-4 py-3 text-center">CC</th>
+                          <th className="px-4 py-3 text-center">MI</th>
+                          <th className="px-4 py-3">Status</th>
+                        </>
+                      ) : (
+                        <>
+                          <th className="px-4 py-3 text-center font-mono">HV</th>
+                          <th className="px-4 py-3 text-center font-mono">Effort</th>
+                          <th className="px-4 py-3 text-center font-mono">Bugs</th>
+                        </>
+                      )}
+                      <th className="px-4 py-3 text-center">Action</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-900">
+                    {[...report.functions]
+                      .sort((a, b) =>
+                        tab === "cyclomatic" ? b.cyclomatic - a.cyclomatic : b.halstead.effort - a.halstead.effort,
+                      )
+                      .map((f) => {
+                        const key = `${f.filePath}:${f.functionName}:${f.startLine ?? 0}`;
+                        return (
+                          <tr key={key} className="hover:bg-slate-900/20 transition-colors">
+                            {!isSingleInput ? (
+                              <td className="px-4 py-3 font-mono text-slate-400 max-w-[280px] truncate" title={f.filePath}>
+                                {f.filePath}
+                              </td>
+                            ) : null}
+                            <td className="px-4 py-3 font-semibold text-slate-200 max-w-[420px] truncate" title={f.functionName}>
+                              {f.functionName}
+                              {typeof f.startLine === "number" ? (
+                                <span className="ml-2 text-[10px] font-mono text-slate-500">L{f.startLine}</span>
+                              ) : null}
+                            </td>
+                            {tab === "cyclomatic" ? (
+                              <>
+                                <td className="px-4 py-3 text-center font-mono font-bold text-slate-100">{f.cyclomatic}</td>
+                                <td className="px-4 py-3 text-center font-mono text-slate-300">
+                                  {Math.round(f.maintainabilityScore)}
+                                </td>
+                                <td className="px-4 py-3">
+                                  <StatusPill status={f.complexityStatus} />
+                                </td>
+                              </>
+                            ) : (
+                              <>
+                                <td className="px-4 py-3 text-center font-mono text-slate-300">{Math.round(f.halstead.volume)}</td>
+                                <td className="px-4 py-3 text-center font-mono text-slate-300">{Math.round(f.halstead.effort)}</td>
+                                <td className="px-4 py-3 text-center font-mono text-slate-300">
+                                  {(f.halstead.estimatedBugs || 0).toFixed(3)}
+                                </td>
+                              </>
+                            )}
+                            <td className="px-4 py-3 text-center">
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  openDetail(f, tab === "cyclomatic" ? "cyclomatic" : "halstead");
+                                }}
+                                className="rounded border border-slate-800 bg-slate-900/60 px-2.5 py-1 font-mono text-[10px] text-slate-300 transition-colors hover:border-slate-700 hover:text-white"
+                                title="View detail"
+                              >
+                                Detail
+                              </button>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          ) : (
+            <div className="overflow-hidden rounded-xl border border-slate-800 bg-slate-950/40 shadow-xl">
+              <div className="overflow-x-auto">
+                {tab === "cyclomatic" ? (
+                  <table className="min-w-full border-collapse text-left text-xs">
+                    <thead className="border-b border-slate-900 bg-slate-900/40">
+                      <tr className="font-bold uppercase tracking-wider text-slate-400 text-[10px]">
+                        <th className="px-4 py-3">File Path</th>
+                        <th className="px-4 py-3 text-center">Functions</th>
+                        <th className="px-4 py-3 text-center">Avg CC</th>
+                        <th className="px-4 py-3 text-center">Max CC</th>
+                        <th className="px-4 py-3 text-center">Avg MI</th>
+                        <th className="px-4 py-3 text-center">Est. Bugs</th>
+                        <th className="px-4 py-3">Status</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-900">
+                      {fileRows.map((r) => (
+                        <tr key={r.filePath} className="hover:bg-slate-900/20 transition-colors">
+                          <td className="px-4 py-3 font-mono text-slate-300 max-w-[340px] truncate" title={r.filePath}>
+                            {r.filePath}
+                          </td>
+                          <td className="px-4 py-3 text-center font-semibold text-slate-200">{r.totalFunctions}</td>
+                          <td className="px-4 py-3 text-center font-mono text-slate-300">{r.averageComplexity.toFixed(1)}</td>
+                          <td className="px-4 py-3 text-center font-mono font-bold text-slate-100">{r.maxComplexity}</td>
+                          <td className="px-4 py-3 text-center font-mono text-slate-300">
+                            {r.averageMaintainability.toFixed(0)}
+                          </td>
+                          <td className="px-4 py-3 text-center font-mono text-slate-300">{r.estimatedBugs.toFixed(3)}</td>
+                          <td className="px-4 py-3">
+                            <StatusPill status={r.status} />
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                ) : (
+                  <table className="min-w-full border-collapse text-left text-xs">
+                    <thead className="border-b border-slate-900 bg-slate-900/40">
+                      <tr className="font-bold uppercase tracking-wider text-slate-400 text-[10px]">
+                        <th className="px-4 py-3">File Path</th>
+                        <th className="px-4 py-3 text-center">Functions</th>
+                        <th className="px-4 py-3 text-center font-mono">Avg HV</th>
+                        <th className="px-4 py-3 text-center font-mono">Avg Effort</th>
+                        <th className="px-4 py-3 text-center font-mono">Avg Difficulty</th>
+                        <th className="px-4 py-3 text-center font-mono">Total Bugs</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-900">
+                      {halsteadFileRows.map((r) => (
+                        <tr key={r.filePath} className="hover:bg-slate-900/20 transition-colors">
+                          <td className="px-4 py-3 font-mono text-slate-300 max-w-[340px] truncate" title={r.filePath}>
+                            {r.filePath}
+                          </td>
+                          <td className="px-4 py-3 text-center font-semibold text-slate-200">{r.totalFunctions}</td>
+                          <td className="px-4 py-3 text-center font-mono text-slate-300">{r.avgVolume.toFixed(1)}</td>
+                          <td className="px-4 py-3 text-center font-mono font-bold text-slate-100">{r.avgEffort.toFixed(0)}</td>
+                          <td className="px-4 py-3 text-center font-mono text-slate-300">{r.avgDifficulty.toFixed(1)}</td>
+                          <td className="px-4 py-3 text-center font-mono text-slate-300">{r.totalEstimatedBugs.toFixed(3)}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                )}
+              </div>
+            </div>
+          )}
         </div>
       ) : null}
 
-      {/* Multi-file mode Functions Tab (Renders MetricTable) */}
-      {!isSingleInput && tab === "functions" ? (
+      {/* CFG Tab (inline view; NOT inside modal detail) */}
+      {tab === "cfg" ? (
         <div className="space-y-4">
-          <MetricTable rows={report.functions} />
+          <div className="flex flex-wrap items-end justify-between gap-3">
+            <div className="space-y-1">
+              <h3 className="text-xs font-bold uppercase tracking-wider text-slate-300">Control Flow Graph (CFG)</h3>
+              <p className="text-[11px] text-slate-500">Klik baris function untuk melihat CFG di panel detail.</p>
+            </div>
+            <div className="text-[10px] font-mono text-slate-500">Functions: {report.summary.totalFunctions}</div>
+          </div>
+
+          <div className="grid gap-4 lg:grid-cols-[1fr_520px]">
+            <div className="overflow-hidden rounded-xl border border-slate-800 bg-slate-950/40 shadow-xl">
+              <div className="overflow-x-auto">
+                <table className="min-w-full border-collapse text-left text-xs">
+                  <thead className="border-b border-slate-900 bg-slate-900/40">
+                    <tr className="font-bold uppercase tracking-wider text-slate-400 text-[10px]">
+                      {!isSingleInput ? <th className="px-4 py-3">File Path</th> : null}
+                      <th className="px-4 py-3">Function Name</th>
+                      <th className="px-4 py-3 text-center">CC</th>
+                      <th className="px-4 py-3">Status</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-900">
+                    {[...report.functions]
+                      .sort((a, b) => b.cyclomatic - a.cyclomatic)
+                      .map((f) => {
+                        const key = `${f.filePath}:${f.functionName}:${f.startLine ?? 0}`;
+                        const active = key === selectedCfgFnKey;
+                        return (
+                          <tr
+                            key={key}
+                            className={[
+                              "cursor-pointer transition-colors",
+                              active ? "bg-slate-900/35" : "hover:bg-slate-900/20",
+                            ].join(" ")}
+                            onClick={() => setSelectedCfgFnKey(key)}
+                          >
+                            {!isSingleInput ? (
+                              <td className="px-4 py-3 font-mono text-slate-400 max-w-[240px] truncate" title={f.filePath}>
+                                {f.filePath}
+                              </td>
+                            ) : null}
+                            <td className="px-4 py-3 font-semibold text-slate-200 max-w-[360px] truncate" title={f.functionName}>
+                              {f.functionName}
+                              {typeof f.startLine === "number" ? (
+                                <span className="ml-2 text-[10px] font-mono text-slate-500">L{f.startLine}</span>
+                              ) : null}
+                            </td>
+                            <td className="px-4 py-3 text-center font-mono font-bold text-slate-100">{f.cyclomatic}</td>
+                            <td className="px-4 py-3">
+                              <StatusPill status={f.complexityStatus} />
+                            </td>
+                          </tr>
+                        );
+                      })}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            <div className="min-w-0">
+              {selectedCfgFn ? <FunctionDetailInline fn={selectedCfgFn} tab="cfg" /> : (
+                <div className="rounded-xl border border-slate-800 bg-slate-950/40 p-6 text-center text-xs text-slate-500">
+                  No function selected.
+                </div>
+              )}
+            </div>
+          </div>
         </div>
       ) : null}
 
@@ -634,6 +856,14 @@ export default function ResultTabs({ report }: { report: AnalysisReport }) {
             </div>
           ) : null}
         </div>
+      ) : null}
+
+      {detailFn ? (
+        <FunctionDetail
+          fn={detailFn}
+          onClose={() => setDetailFn(null)}
+          initialTab={detailInitialTab}
+        />
       ) : null}
 
       {/* Charts Tab */}

@@ -2,7 +2,6 @@
 
 import { useMemo, useState, useEffect } from "react";
 import type { FunctionReport } from "@/types/analysis";
-import MermaidDiagram from "@/components/MermaidDiagram";
 
 function StatCard({ k, v, desc }: { k: string; v: string; desc?: string }) {
   return (
@@ -35,9 +34,9 @@ export default function FunctionDetail({
 }: {
   fn: FunctionReport;
   onClose: () => void;
-  initialTab?: "overview" | "cyclomatic" | "halstead" | "cfg";
+  initialTab?: "cyclomatic" | "halstead";
 }) {
-  const [tab, setTab] = useState<"overview" | "cyclomatic" | "halstead" | "cfg">(initialTab ?? "overview");
+  const [tab, setTab] = useState<"cyclomatic" | "halstead">(initialTab ?? "cyclomatic");
   const halstead = fn.halstead;
   const breakdown = fn.cyclomaticBreakdown;
 
@@ -126,10 +125,8 @@ export default function FunctionDetail({
           <div className="flex gap-2">
             {(
               [
-                ["overview", "Overview"],
                 ["cyclomatic", "McCabe Complexity"],
                 ["halstead", "Halstead Metrics"],
-                ["cfg", "Control Flow Graph (CFG)"],
               ] as const
             ).map(([id, label]) => (
               <button
@@ -152,45 +149,6 @@ export default function FunctionDetail({
         {/* Scrollable specs zone */}
         <div className="flex-1 overflow-y-auto p-6 space-y-6">
           
-          {/* Overview Tab Content */}
-          {tab === "overview" && (
-            <div className="space-y-6">
-              <div className="grid gap-4 grid-cols-2 md:grid-cols-3">
-                <StatCard k="Lines of Code (LOC)" v={fn.loc ? String(fn.loc) : "0"} desc="Physical line count" />
-                <StatCard k="Cyclomatic Score (CC)" v={String(fn.cyclomatic)} desc="McCabe branch evaluation" />
-                <StatCard 
-                  k="Complexity Level" 
-                  v={fn.complexityStatus === "good" ? "SAFE" : fn.complexityStatus === "medium" ? "WARNING" : "CRITICAL"} 
-                  desc="Determines unit test coverage bounds" 
-                />
-                <StatCard k="Maintainability Index (MI)" v={fn.maintainabilityScore.toFixed(0)} desc="Index aggregated from LOC, CC, &amp; Halstead" />
-                <StatCard k="Halstead Volume (HV)" v={fn.halstead.volume.toFixed(1)} desc="Calculated program program size in bits" />
-                <StatCard 
-                  k="Refactoring Risk Score" 
-                  v={typeof fn.riskScore === "number" ? `${fn.riskScore.toFixed(0)}%` : "0%"} 
-                  desc="Aggregated statistics risk indicator" 
-                />
-              </div>
-
-              {/* Quick advices inside Overview */}
-              <div className="rounded-xl border border-slate-900 bg-slate-900/30 p-5 space-y-3 shadow-sm">
-                <h4 className="text-xs font-bold uppercase tracking-wider text-slate-300">Targeted Recommendations</h4>
-                <ul className="space-y-2 pr-1">
-                  {fn.recommendations && fn.recommendations.length > 0 ? (
-                    fn.recommendations.map((rec, i) => (
-                      <li key={i} className="text-xs text-slate-400 flex items-start gap-2.5 leading-relaxed">
-                        <span className="h-1.5 w-1.5 rounded-full bg-sky-400 mt-1.5 flex-shrink-0" />
-                        <span>{rec}</span>
-                      </li>
-                    ))
-                  ) : (
-                    <li className="text-xs text-slate-500 italic">No specific refactoring recommended for this code block. Your code complies with industry static metrics standards.</li>
-                  )}
-                </ul>
-              </div>
-            </div>
-          )}
-
           {/* Cyclomatic breakdown Tab Content */}
           {tab === "cyclomatic" && (
             <div className="grid gap-6 md:grid-cols-2">
@@ -250,38 +208,6 @@ export default function FunctionDetail({
                   <StatCard key={k} k={k} v={v} desc={desc} />
                 ))}
               </div>
-            </div>
-          )}
-
-          {/* Control Flow Graph Tab Content */}
-          {tab === "cfg" && (
-            <div className="space-y-4 h-full">
-              <div className="space-y-1">
-                <h4 className="text-xs font-bold uppercase tracking-wider text-slate-300">Control Flow Graph (CFG)</h4>
-                <p className="text-[11px] text-slate-500">
-                  Interactive graph demonstrating program execution transitions. Click node segments to inspect paths.
-                </p>
-              </div>
-              
-              {fn.cfg?.mermaid ? (
-                <div className="space-y-4">
-                  <MermaidDiagram definition={fn.cfg.mermaid} />
-                  <details className="rounded-xl border border-slate-900 bg-slate-950 p-4 transition-colors hover:border-slate-800">
-                    <summary className="cursor-pointer text-xs font-semibold text-slate-400 select-none hover:text-slate-200">
-                      Mermaid Graph Spec Definition
-                    </summary>
-                    <pre className="mt-3 overflow-x-auto text-[10px] leading-relaxed text-slate-500 font-mono bg-slate-950 p-3 rounded border border-slate-900">
-                      {fn.cfg.mermaid}
-                    </pre>
-                  </details>
-                </div>
-              ) : (
-                <div className="flex h-48 flex-col items-center justify-center rounded-xl border border-dashed border-slate-900 bg-slate-950/40 text-center">
-                  <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="text-slate-700 mb-2"><path d="M18 20a6 6 0 0 0-12 0"/><circle cx="12" cy="10" r="4"/><path d="M12 2v2"/></svg>
-                  <p className="text-xs font-semibold text-slate-400">CFG Unavailable</p>
-                  <p className="text-[10px] text-slate-600 max-w-xs mt-1">Control Flow Graphs are constructed for parsed functions with explicit logical branch paths.</p>
-                </div>
-              )}
             </div>
           )}
 
